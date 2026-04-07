@@ -13,8 +13,7 @@ export async function POST(req: Request) {
       model: anthropic('claude-haiku-4-5-20251001'),
       system: SYSTEM_PROMPT,
       messages,
-      tools,
-      maxSteps: 5
+      tools
     })
 
     return result.toTextStreamResponse()
