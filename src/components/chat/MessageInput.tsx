@@ -23,7 +23,7 @@ export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t border-slate-200 dark:border-slate-800">
+    <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t border-black">
       <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}

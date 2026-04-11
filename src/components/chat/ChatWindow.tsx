@@ -20,7 +20,7 @@ export function ChatWindow() {
 
   return (
     <Card className="w-full max-w-2xl h-screen max-h-screen md:max-h-[600px] flex flex-col shadow-lg">
-      <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+      <CardHeader className="border-b border-black">
         <CardTitle className="text-2xl">Career Twin</CardTitle>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
           Your AI-powered career advisor
