@@ -4,9 +4,9 @@ export type VisitorIntent = 'recruiter' | 'hiring_manager' | 'collaborator' | 'o
 
 export interface Visitor {
   id: string
-  name: string | null
+  name: string
   email: string | null
-  intent: string | null
+  intent: VisitorIntent
   created_at: string
 }
 
