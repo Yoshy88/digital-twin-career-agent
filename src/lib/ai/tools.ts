@@ -1,4 +1,10 @@
 import { z } from 'zod'
+import {
+  createBooking,
+  fetchOwnerProfile,
+  saveVisitorContact,
+  type VisitorIntent
+} from '@/lib/db/queries'
 
 export const tools = {
   saveContact: {
@@ -10,32 +16,55 @@ export const tools = {
         .describe('The visitor reason for reaching out')
     }),
     execute: async ({ name, email, intent }: { name: string; email: string; intent: string }) => {
-      return { success: true, message: `Got it! I'll make sure John follows up with ${name}.` }
-    }
-  },
+      try {
+        const visitor = await saveVisitorContact({
+          name,
+          email,
+          intent: intent as VisitorIntent
+        })
 
-  fetchProfile: {
-    description: "Fetch John's full profile when a visitor asks about his background or skills",
-    inputSchema: z.object({
-      placeholder: z.string().optional()
-    }),
-    execute: async () => {
-      return {
-        name: 'John Vincent Reyes',
-        role: 'Full Stack Developer',
-        skills: ['Next.js', 'React', 'TypeScript', 'Node.js', 'PostgreSQL', 'AI/ML'],
-        available: true
+        return {
+          success: true,
+          visitorId: visitor.id,
+          message: `Thanks, ${name}. Dwight has your details and will follow up soon.`
+        }
+      } catch (error) {
+        console.error('saveContact tool error:', error)
+        return { success: false, message: 'I could not save your contact right now.' }
       }
     }
   },
 
-  triggerBooking: {
-    description: 'Trigger a meeting booking when a visitor wants to schedule time with John',
+  fetchProfile: {
+    description: "Fetch Dwight's full profile when a visitor asks about his background or skills",
     inputSchema: z.object({
-      visitorName: z.string().describe('The name of the visitor requesting a booking')
+      placeholder: z.string().optional()
     }),
-    execute: async ({ visitorName }: { visitorName: string }) => {
-      return { success: true, message: `Booking requested for ${visitorName}. John will be in touch shortly!` }
+    execute: async () => {
+      return await fetchOwnerProfile()
+    }
+  },
+
+  triggerBooking: {
+    description: 'Trigger a meeting booking when a visitor wants to schedule time with Dwight',
+    inputSchema: z.object({
+      visitorName: z.string().describe('The name of the visitor requesting a booking'),
+      visitorEmail: z.string().email().optional().describe('Optional visitor email')
+    }),
+    execute: async ({ visitorName, visitorEmail }: { visitorName: string; visitorEmail?: string }) => {
+      try {
+        const booking = await createBooking({ visitorName, visitorEmail })
+
+        return {
+          success: true,
+          bookingId: booking.id,
+          status: booking.status,
+          message: `Booking requested for ${visitorName}. Dwight will be in touch shortly.`
+        }
+      } catch (error) {
+        console.error('triggerBooking tool error:', error)
+        return { success: false, message: 'I could not create a booking request right now.' }
+      }
     }
   }
 }

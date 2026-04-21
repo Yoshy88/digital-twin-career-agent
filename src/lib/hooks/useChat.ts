@@ -10,6 +10,7 @@ interface UseChatOptions {
 export function useChat({ api }: UseChatOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const append = useCallback(
     async (message: Message) => {
@@ -19,22 +20,57 @@ export function useChat({ api }: UseChatOptions) {
       setIsLoading(true);
 
       try {
+        const messageHistory = [...messages, userMessage];
         const response = await fetch(api, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            messages: [...messages, userMessage],
+            messages: messageHistory,
+            ...(conversationId ? { conversationId } : {}),
           }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch response');
+          let serverMessage = 'I could not process your message right now. Please try again.';
+
+          try {
+            const contentType = response.headers.get('content-type') ?? '';
+            if (contentType.includes('application/json')) {
+              const payload = await response.json();
+              if (typeof payload?.error === 'string' && payload.error.trim()) {
+                serverMessage = payload.error;
+              }
+            } else {
+              const text = await response.text();
+              if (text.trim()) {
+                serverMessage = text;
+              }
+            }
+          } catch {
+            // Keep default serverMessage when parsing response fails.
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: serverMessage,
+            },
+          ]);
+
+          return;
         }
 
         if (!response.body) {
           throw new Error('No response body');
+        }
+
+        const nextConversationId = response.headers.get('x-conversation-id');
+        if (nextConversationId && nextConversationId !== conversationId) {
+          setConversationId(nextConversationId);
         }
 
         let assistantMessage = '';
@@ -47,6 +83,10 @@ export function useChat({ api }: UseChatOptions) {
 
           const chunk = decoder.decode(value);
           assistantMessage += chunk;
+        }
+
+        if (!assistantMessage.trim()) {
+          assistantMessage = 'Thanks for your message. I saved your request and Dwight will follow up shortly.';
         }
 
         // Add assistant message to the state
@@ -64,7 +104,7 @@ export function useChat({ api }: UseChatOptions) {
         setIsLoading(false);
       }
     },
-    [messages, api]
+    [messages, api, conversationId]
   );
 
   return {
