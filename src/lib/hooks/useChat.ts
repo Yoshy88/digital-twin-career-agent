@@ -10,6 +10,7 @@ interface UseChatOptions {
 export function useChat({ api }: UseChatOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const append = useCallback(
@@ -18,6 +19,7 @@ export function useChat({ api }: UseChatOptions) {
       const userMessage = { ...message, id: message.id || Date.now().toString() };
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
+      setError(null);
 
       try {
         const messageHistory = [...messages, userMessage];
@@ -33,6 +35,7 @@ export function useChat({ api }: UseChatOptions) {
         });
 
         if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
           let serverMessage = 'I could not process your message right now. Please try again.';
 
           try {
@@ -86,6 +89,7 @@ export function useChat({ api }: UseChatOptions) {
         }
 
         if (!assistantMessage.trim()) {
+          throw new Error('Empty response from API');
           assistantMessage = 'Thanks for your message. I saved your request and Dwight will follow up shortly.';
         }
 
@@ -98,8 +102,20 @@ export function useChat({ api }: UseChatOptions) {
             content: assistantMessage,
           },
         ]);
-      } catch (error) {
-        console.error('Chat error:', error);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        console.error('Chat error:', errorMessage);
+        setError(errorMessage);
+        
+        // Add error message to chat
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `Error: ${errorMessage}`,
+          },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -110,6 +126,7 @@ export function useChat({ api }: UseChatOptions) {
   return {
     messages,
     isLoading,
+    error,
     append,
   };
 }

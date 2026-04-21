@@ -145,6 +145,10 @@ export async function POST(req: Request) {
 
     const profile = await fetchOwnerProfile()
 
+    if (!messages || !Array.isArray(messages)) {
+      return new Response('Invalid messages format', { status: 400 })
+    }
+
     const result = await streamText({
       model: anthropic('claude-haiku-4-5-20251001'),
       system: `${SYSTEM_PROMPT}\n\n${buildProfileContext(profile)}`,
@@ -158,6 +162,11 @@ export async function POST(req: Request) {
       fullText += chunk
     }
 
+    if (!fullText.trim()) {
+      return new Response('Empty response from model', { status: 500 })
+    }
+
+    return new Response(fullText, {
     const reply = fullText.trim() || buildDbAwareFallbackReply(userText, profile)
     await saveMessage({
       conversationId,
@@ -180,6 +189,9 @@ export async function POST(req: Request) {
       }
     })
   } catch (error) {
+    console.error('Chat API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error'
+    return new Response(errorMessage, { status: 500 })
     if (error instanceof ZodError) {
       return jsonError(error.issues[0]?.message ?? 'Invalid payload', requestId, 400)
     }

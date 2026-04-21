@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link'
+import { ThemeToggle } from './ThemeToggle'
 
 const navLinks = [
   { label: 'Home', href: '#' },
@@ -9,41 +12,49 @@ const navLinks = [
 
 export default function Header() {
   return (
-    <header className="w-full bg-white border-b border-[#e5e5e5]">
-      <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <header className="w-full bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 transition-colors duration-200">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo + Brand */}
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/g1logoupdated.png"
             alt="Digital Twin"
-            className="size-14 rounded-full bg-[#0a0a0a] object-contain flex-shrink-0 p-1"
+            className="w-12 h-12 rounded-full bg-neutral-900 dark:bg-neutral-800 object-contain flex-shrink-0 p-1"
           />
-          <span className="text-black text-lg font-semibold tracking-tight">
-            Digital Twin
-          </span>
-          {/* Online status */}
-          <div className="flex items-center gap-1.5 ml-2">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-green-500" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-neutral-900 dark:text-white text-base font-semibold tracking-tight">
+              Digital Twin
             </span>
-            <span className="text-sm text-black">24/7 Active</span>
+            {/* Online status */}
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+              </span>
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">24/7 Active</span>
+            </div>
           </div>
         </div>
 
-        {/* Nav Links */}
-        <nav className="hidden sm:flex items-center gap-6">
+        {/* Nav Links + Theme Toggle */}
+        <nav className="hidden sm:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.label}
               href={link.href}
-              className="btn-hover relative text-sm font-normal text-black hover:text-black transition-colors pb-0.5"
+              className="text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors duration-200"
             >
-              <span className="btn-label">{link.label}</span>
+              {link.label}
             </Link>
           ))}
+          <ThemeToggle />
         </nav>
+
+        {/* Mobile Theme Toggle */}
+        <div className="sm:hidden">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )
