@@ -10,6 +10,7 @@ interface UseChatOptions {
 export function useChat({ api }: UseChatOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const append = useCallback(
     async (message: Message) => {
@@ -17,6 +18,7 @@ export function useChat({ api }: UseChatOptions) {
       const userMessage = { ...message, id: message.id || Date.now().toString() };
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
+      setError(null);
 
       try {
         const response = await fetch(api, {
@@ -30,7 +32,7 @@ export function useChat({ api }: UseChatOptions) {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch response');
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
         }
 
         if (!response.body) {
@@ -49,6 +51,10 @@ export function useChat({ api }: UseChatOptions) {
           assistantMessage += chunk;
         }
 
+        if (!assistantMessage.trim()) {
+          throw new Error('Empty response from API');
+        }
+
         // Add assistant message to the state
         setMessages((prev) => [
           ...prev,
@@ -58,8 +64,20 @@ export function useChat({ api }: UseChatOptions) {
             content: assistantMessage,
           },
         ]);
-      } catch (error) {
-        console.error('Chat error:', error);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        console.error('Chat error:', errorMessage);
+        setError(errorMessage);
+        
+        // Add error message to chat
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `Error: ${errorMessage}`,
+          },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -70,6 +88,7 @@ export function useChat({ api }: UseChatOptions) {
   return {
     messages,
     isLoading,
+    error,
     append,
   };
 }
