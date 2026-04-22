@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(initialTheme);
+    setTheme(initialTheme as Theme);
     document.documentElement.setAttribute('data-theme', initialTheme);
     setMounted(true);
   }, []);
@@ -36,7 +36,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Provide a default context value during SSR
   const contextValue = mounted 
     ? { theme, toggleTheme }
-    : { theme: 'light', toggleTheme: () => {} };
+    : { theme: 'light' as Theme, toggleTheme }
 
   return (
     <ThemeContext.Provider value={contextValue}>

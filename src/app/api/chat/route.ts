@@ -1,4 +1,4 @@
-import { streamText } from 'ai'
+import { streamText, type ModelMessage } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { ZodError } from 'zod'
 import { SYSTEM_PROMPT } from '@/lib/ai/prompt'
@@ -16,18 +16,18 @@ import { jsonError, logError, logInfo, requestIdFromHeaders } from '@/lib/api/ht
 export const maxDuration = 30
 
 interface ChatMessage {
-  role?: string
-  content?: string
+  role: "user" | "assistant" | "tool" | "system"
+  content: string
 }
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
-function latestUserContent(messages: ChatMessage[]) {
+function latestUserContent(messages: ModelMessage[]) {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     if (messages[i]?.role === 'user') {
-      return messages[i]?.content?.trim() ?? ''
+      return (typeof messages[i]?.content === 'string' ? (messages[i].content as string).trim() : '')
     }
   }
 
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
 
   try {
     const body = chatBodySchema.parse(await req.json())
-    const messages = body.messages as ChatMessage[]
+    const messages = body.messages as unknown as ModelMessage[]
     const incomingConversationId = body.conversationId
     const conversationId = incomingConversationId && isUuid(incomingConversationId)
       ? incomingConversationId
@@ -154,7 +154,6 @@ export async function POST(req: Request) {
       system: `${SYSTEM_PROMPT}\n\n${buildProfileContext(profile)}`,
       messages,
       tools,
-      maxSteps: 5
     })
 
     let fullText = ''
@@ -166,13 +165,20 @@ export async function POST(req: Request) {
       return new Response('Empty response from model', { status: 500 })
     }
 
-    return new Response(fullText, {
     const reply = fullText.trim() || buildDbAwareFallbackReply(userText, profile)
-    await saveMessage({
-      conversationId,
-      role: 'assistant',
-      content: reply
-    })
+await saveMessage({
+  conversationId,
+  role: 'assistant',
+  content: reply
+})
+
+return new Response(reply, {
+  headers: {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'X-Conversation-Id': conversationId,
+    'x-request-id': requestId
+  }
+})
 
     logInfo(requestId, 'chat.response', {
       conversationId,
@@ -191,12 +197,16 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Chat API error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Internal Server Error'
-    return new Response(errorMessage, { status: 500 })
     if (error instanceof ZodError) {
       return jsonError(error.issues[0]?.message ?? 'Invalid payload', requestId, 400)
     }
+    return new Response(errorMessage, { status: 500 })
 
     logError(requestId, 'chat.post', error)
     return jsonError('Internal Server Error', requestId, 500)
   }
 }
+
+
+
+
